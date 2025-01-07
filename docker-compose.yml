@@ -1,0 +1,12 @@
+version: '3.9'
+services:
+  vaccine_analysis_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vaccine_app
+    ports:
+      - "8501:8501"
+
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
