@@ -1,48 +1,30 @@
 import streamlit as st
-from openai import OpenAI
 import json
 import os
 import pandas as pd
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+
+tokenizer = AutoTokenizer.from_pretrained("tabularisai/multilingual-sentiment-analysis")
+model = AutoModelForSequenceClassification.from_pretrained("tabularisai/multilingual-sentiment-analysis")
 
 
-api_key = os.getenv("OPENAI_API_KEY")
+def predict_sentiment(text):
 
-
-client = OpenAI(
-    api_key=api_key  
-)
-
-
-def analyze_data(txt):
-    
     st.session_state.analysis_status = "analyzing"
     with placeholder:
         st.info("Analyzing...", icon="🔍")   
-        content = f'''
-                For the following vaccine related text, return a json object with the following schema: {{
-                    "Sentiment": "Pro-Vaccine" | "Negative" | "Anti-Vaccine", 
-                    "Intensity": number from 1 to 10, 
-                    "Location": any location mentioned in the text, 
-                    "Type_of_vaccine": any type of vaccine mentioned in the text
-                }}. If you cant find information about one of the fields complete it as unknown. The text is: {txt}
-                '''
-
-
-        # OpenAI API call
-        chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                f"content":  content,
-            }
-        ],
-        model="gpt-4o",
-        temperature=0.1,
-        response_format={ "type": "json_object" }
-        )
+      
+        texts = [text]
+        inputs = tokenizer(texts, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
+        sentiment_map = {0: "Very Negative", 1: "Negative", 2: "Neutral", 3: "Positive", 4: "Very Positive"}
         st.session_state.analysis_status = "analyzed"
-        return chat_completion.choices[0].message.content
-    
+
+        return [sentiment_map[p] for p in torch.argmax(probabilities, dim=-1).tolist()]
+
 
 # Initialize session state for button click
 
@@ -77,15 +59,12 @@ with st.container(border=True):
         # Reset the analysis status and placeholder on button click
         st.session_state.analysis_status = "idle"
         placeholder.empty()  # Clear placeholder
-        response = json.loads(analyze_data(txt))
+        response = predict_sentiment(txt)
                               
 
         
         with st.container(border=True):
-            st.metric(label="Sentiment", value=response["Sentiment"])
-            st.metric(label="Intensity", value=response["Intensity"])
-            st.metric(label="Location", value=response["Location"])
-            st.metric(label="Type of Vaccine", value=response["Type_of_vaccine"])
+            st.write(response[0])
 
 
     # Display the final status
