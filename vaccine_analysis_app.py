@@ -3,6 +3,7 @@ from openai import OpenAI
 import json
 import os
 import pandas as pd
+from utilities import image_to_text
 
 
 api_key = os.getenv("OPENAI_API_KEY")
@@ -69,27 +70,68 @@ with st.container(border=True):
 
     st.write("This is an app to analyze the sentiment of a post regarding vaccines.")
 
-    txt = st.text_area("Enter a post about vaccines:", height=200)
-
-    placeholder = st.empty()
-    if st.button("Analyze"):
-
-        # Reset the analysis status and placeholder on button click
-        st.session_state.analysis_status = "idle"
-        placeholder.empty()  # Clear placeholder
-        response = json.loads(analyze_data(txt))
-                              
-
-        
-        with st.container(border=True):
-            st.metric(label="Sentiment", value=response["Sentiment"])
-            st.metric(label="Intensity", value=response["Intensity"])
-            st.metric(label="Location", value=response["Location"])
-            st.metric(label="Type of Vaccine", value=response["Type_of_vaccine"])
+    tab1, tab2 = st.tabs(["Text", "Image"])
 
 
-    # Display the final status
-    if st.session_state.analysis_status == "analyzed":
 
-        placeholder.success("Analyzed!", icon="✅")
+    with tab1:
 
+        txt = st.text_area("Enter a post about vaccines:", height=200)
+
+        placeholder = st.empty()
+        if st.button("Analyze"):
+
+            # Reset the analysis status and placeholder on button click
+            st.session_state.analysis_status = "idle"
+            placeholder.empty()  # Clear placeholder
+            response = json.loads(analyze_data(txt))
+                                
+
+            
+            with st.container(border=True):
+                st.metric(label="Sentiment", value=response["Sentiment"])
+                st.metric(label="Intensity", value=response["Intensity"])
+                st.metric(label="Location", value=response["Location"])
+                st.metric(label="Type of Vaccine", value=response["Type_of_vaccine"])
+
+
+        # Display the final status
+        if st.session_state.analysis_status == "analyzed":
+
+            placeholder.success("Analyzed!", icon="✅")
+
+
+
+    with tab2:
+        image = st.file_uploader("Upload an image of an vaccine related post.", type=["jpg", "png", "jpeg"])
+
+
+        placeholder = st.empty()
+        if st.button("Analyze image"):
+            st.session_state.analysis_status = "idle"
+            placeholder.empty()
+
+            if image is not None:
+                bytes_data = image.getvalue()
+
+                text = image_to_text(bytes_data)
+
+
+                if text == "":
+                    st.error("No text found in the image. Please upload an image with text.")
+
+
+                response = json.loads(analyze_data(text))
+
+
+                with st.container(border=True):
+                    st.metric(label="Sentiment", value=response["Sentiment"])
+                    st.metric(label="Intensity", value=response["Intensity"])
+                    st.metric(label="Location", value=response["Location"])
+                    st.metric(label="Type of Vaccine", value=response["Type_of_vaccine"])
+
+
+                if st.session_state.analysis_status == "analyzed":
+                    placeholder.success("Analyzed!", icon="✅")
+            else:
+                st.warning("Please upload an image first.")
