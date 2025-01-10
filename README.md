@@ -8,3 +8,6 @@ This repo contains code on running a streamlit app that analyzes posts regarding
     "Type_of_vaccine": "any type of vaccine mentioned in the text"
 }
 ```
+
+
+Made with ❤️ by [datamax.ai](https://www.datamax.ai/).
